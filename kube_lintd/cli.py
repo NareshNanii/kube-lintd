@@ -16,7 +16,8 @@ def main():
         else:
             print(f"❌ File not found: {args.file}")
     elif args.watch:
-        print("👀 Watch mode coming soon!")
+        from kube_lintd.watcher import watch_directory
+        watch_directory(args.watch)
     else:
         print("⚠️ Please specify --file <filename.yaml> or --watch <directory>")
 
