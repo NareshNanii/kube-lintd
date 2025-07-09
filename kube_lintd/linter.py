@@ -2,6 +2,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
+from kube_lintd.rules.pod import validate_pod
 from ruamel.yaml import YAML
 from colorama import Fore, Style, init
 from difflib import get_close_matches
@@ -67,14 +68,20 @@ def load_config():
     for path in config_paths:
         if os.path.exists(path):
             with open(path, "r") as f:
-                return pyyaml.safe_load(f).get("rules", {})
-    return {}
+                config = pyyaml.safe_load(f) or {}
+                return {
+                    "rules": config.get("rules", {}),
+                    "ignore": config.get("ignore", [])
+                }
+    return {"rules": {}, "ignore": []}
 
-rules = load_config()
 
 
-def lint_file(file_path):
+def lint_file(file_path, output_json=False):
     yaml = YAML()
+    config = load_config()
+    rules = config["rules"]
+    ignore_ids = set(config["ignore"])
     containers = []
     logger.info(f"🔁 Lint triggered for: {file_path}")
 
@@ -126,38 +133,44 @@ def lint_file(file_path):
         # ✅ Unified container-level validation
         for container in containers:
             validate_container(container, rules, errors)
+        validate_pod(spec, template_spec, containers, rules, errors)
 
-        # --- Pod-level Rule: hostNetwork ---
-        if isinstance(spec, dict) and spec.get("hostNetwork") is True:
-            errors.append("Use of 'hostNetwork: true' detected. Avoid unless explicitly required.")
-        if isinstance(template_spec, dict) and template_spec.get("hostNetwork") is True:
-            errors.append("Use of 'hostNetwork: true' inside Pod template detected. Avoid unless explicitly required.")
-
-        # --- Pod-level Rule: runAsUser = 0 ---
-        pod_ctx = template_spec.get("securityContext", spec.get("securityContext", {}))
-        if isinstance(pod_ctx, dict) and pod_ctx.get("runAsUser") == 0:
-            errors.append("Pod is running as user ID 0 (root). Use a non-root UID for better security.")
-
-        # --- Pod-level Rule: duplicate image detection ---
-        image_count = {}
-        for c in containers:
-            image = c.get("image", "<none>")
-            image_count[image] = image_count.get(image, 0) + 1
-        for image, count in image_count.items():
-            if count > 1:
-                errors.append(f"Image '{image}' used in {count} containers. Consider separating responsibilities.")
-
-        # Logging results
-        if errors:
-            print(f"{Fore.RED}❌ {file_path} has {len(errors)} error(s):")
-            for e in errors:
-                print(f"{Fore.RED}   - {e}")
-            logger.warning(f"{file_path} ❌ ({len(errors)} error[s])")
-            for e in errors:
-                logger.warning(f"   - {e}")
+        if output_json:
+            import json
+            output = {
+                "file": file_path,
+                "errors": errors
+            }
+            print(json.dumps(output, indent=2))
         else:
-            print(f"{Fore.GREEN}✅ {file_path} looks valid")
-            logger.info(f"{file_path} ✅")
+            if errors:
+                print(f"{Fore.RED}❌ {file_path} has {len(errors)} issue(s):")
+
+                for e in errors:
+                    icon = {
+                        "high": "🔥",
+                        "warning": "⚠️",
+                        "info": "🛈"
+                    }.get(e.get("severity", "info"), "🛈")
+
+                    color = {
+                        "high": Fore.RED,
+                        "warning": Fore.YELLOW,
+                        "info": Fore.BLUE
+                    }.get(e.get("severity", "info"), Fore.WHITE)
+                    eid = e.get("id", "N/A")
+                    severity = e.get("severity", "info")
+                    message = e.get("message", str(e))
+
+                    print(f"   {color}{icon} [{e.get('id')}] ({e.get('severity')}) {e.get('message')}{Style.RESET_ALL}")
+
+                logger.warning(f"{file_path} ❌ ({len(errors)} issue[s])")
+                for e in errors:
+                    logger.warning(f"   - [{e.get('id')}] {e.get('severity').upper()}: {e.get('message')}")
+            else:
+                print(f"{Fore.GREEN}✅ {file_path} looks valid")
+                logger.info(f"{file_path} ✅")
+
 
     except Exception as e:
         err = f"❌ Error parsing {file_path}: {str(e)}"

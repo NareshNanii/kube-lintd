@@ -1,0 +1,3 @@
+[console_scripts]
+kube-lintd = kube_lintd.cli:main
+

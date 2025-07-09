@@ -1,0 +1,56 @@
+rules:
+  - id: K8S-CT-001
+    severity: warning
+    title: Missing resource limits
+    description: Containers should explicitly define CPU and memory limits to prevent resource contention and overcommitment.
+
+  - id: K8S-CT-002
+    severity: high
+    title: Privileged mode enabled
+    description: Privileged containers have full access to the host. Avoid unless absolutely necessary.
+
+  - id: K8S-CT-003
+    severity: info
+    title: imagePullPolicy set to Always
+    description: "'imagePullPolicy: Always' is best avoided for static pods or when image tags are versioned explicitly."
+
+  - id: K8S-CT-004
+    severity: info
+    title: readOnlyRootFilesystem not enabled
+    description: Enables immutability within the container and reduces risk of tampering.
+
+  - id: K8S-CT-005
+    severity: warning
+    title: Image has no tag
+    description: Always pin images with a tag to avoid pulling unintended versions.
+
+  - id: K8S-CT-006
+    severity: warning
+    title: Using latest tag
+    description: "Avoid using the 'latest' tag in production as it can lead to non-deterministic deployments."
+
+  - id: K8S-PD-001
+    severity: high
+    title: Pod running as UID 0 (root)
+    description: Run pods as non-root wherever possible to reduce security risks.
+
+  - id: K8S-PD-002a
+    severity: warning
+    title: hostNetwork enabled in Pod spec
+    description: Avoid using hostNetwork unless specifically required, as it exposes the Pod to host-level networking.
+
+  - id: K8S-PD-002b
+    severity: warning
+    title: hostNetwork enabled in Pod template
+    description: Avoid using hostNetwork in controllers like Deployment or DaemonSet templates.
+
+  - id: K8S-PD-003
+    severity: info
+    title: Duplicate image usage across containers
+    description: Consider using separate images for distinct responsibilities within a Pod.
+
+  - id: K8S-YAML-001
+    severity: high
+    title: YAML parsing failed
+    description: The provided YAML file is syntactically invalid. Check indentation and formatting on the indicated line.
+

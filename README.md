@@ -1,69 +1,144 @@
-# kube-lintd 🧹📦
+# 🧹 kube-lintd — Secure Your Static Pods Before kubelet Breaks
 
-A lightweight real-time linter and validator for static Kubernetes pod manifests.
+`kube-lintd` is a fast, customizable linter and validator for static Kubernetes Pod manifests. It detects YAML issues, security misconfigurations, and deployment risks **before** kubelet fails silently or throws cryptic errors.
 
-Static pods can silently break clusters when misconfigured. `kube-lintd` watches your static manifest directory (like `/etc/kubernetes/manifests`) and provides instant feedback on schema issues, invalid YAML, and common pitfalls — before kubelet throws cryptic errors.
+> 🔍 Perfect for CI/CD pipelines, clusters, and local dev workspaces.
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.7%2B-blue)
+![Status](https://img.shields.io/badge/status-active-brightgreen)
 
 ---
 
 ## ✨ Features
 
-- ✅ Watches static pod YAMLs in real-time
-- 🧪 Validates YAML syntax and Kubernetes schema
-- 💡 Detects common mistakes: bad indentation, wrong fields, missing `kind`, etc.
-- 🧠 (Soon) Explains kubelet errors using natural language
-- 🖥️ Optional Web UI and log viewer coming soon
-- 🔌 Works anywhere: bare metal, VMs, CI/CD
+- 🔎 Lint static Pod files instantly with rich output
+- 👀 Watch directories like `/etc/kubernetes/manifests/` in real-time
+- 🔐 Detect `privileged: true`, `hostNetwork`, root containers, and more
+- 📚 Explore all rules with `--list-rules` and detailed `--rule-info`
+- 📄 Auto-generate `RULES.md` from your YAML catalog
+- 🧠 (Coming soon) Explain kubelet errors using natural language
+- 🖥️ Optional web UI under development
 
 ---
 
-## 📦 Quickstart (Developer Mode)
+## ⚡ Quickstart
 
 ```bash
 git clone https://github.com/your-username/kube-lintd.git
 cd kube-lintd
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
-
-python -m kube_lintd.cli --watch /etc/kubernetes/manifests
-```
-----
-# Want to lint a single file?
-python -m kube_lintd.cli --file /path/to/manifest.yaml
-
-# 🔍 Sample Output
-
-[✓] kube-apiserver.yaml: Valid
-[!] etcd.yaml: Line 12 — missing '-' before 'name'
-[!] scheduler.yaml: Unknown field 'namspace'. Did you mean 'namespace'?
-
------
-
-# 🛣 Roadmap
-[x] CLI: Watch & lint in real-time
-
-[ ] Web UI for validation and visual diffs
-
-[ ] Live kubelet log parser + error explainer
-
-[ ] GitHub Actions & CI/CD support
-
-[ ] Offline-friendly schema bundle
-
-----------
-# 🤝 Contributing
-PRs welcome! Whether it's a new linter rule, integration, or test — jump in.
-
-----------
-# 📜 License
-MIT License. Built with ❤️ to help engineers everywhere ship safer clusters.
-
+pip install -e .
+'''
 
 ---
 
-Next up, I’ll scaffold the `cli.py` and `linter.py` files so you can run your first `--file` check and start watching folders in real time.
+## 🚀 Usage
 
-Ready to see your tool come to life? Let’s ship it 🔧💻
+# Lint a specific YAML manifest
+kube-lintd --file path/to/pod.yaml
 
------------
+# Watch a directory for changes (like kubelet)
+kube-lintd --watch /etc/kubernetes/manifests
+
+# Explore rules
+kube-lintd --list-rules
+
+# Detailed info about a rule
+kube-lintd --rule-info K8S-CT-004
+
+---
+
+Example output:
+
+[✓] kube-apiserver.yaml: Valid
+[!] etcd.yaml: Line 12 — missing '-' before 'name'
+[!] controller.yaml: Uses 'hostNetwork: true' and runs as UID 0
+
+---
+
+📚 Rule Catalog
+
+Use built-in commands to explore:
+
+kube-lintd --list-rules
+kube-lintd --rule-info K8S-PD-001
+
+Or check out the full 📘 RULES.md
+
+---
+
+⚙️ Example .kube-lintd.yaml Config
+
+ignore:
+  - K8S-CT-004
+fail_on: warning
+rules_catalog_path: kube_lintd/rules_catalog.yaml
+
+(Note: CLI config support is planned for a future release)
+
+---
+
+🔍 YAML Before & After
+
+Before: insecure static pod
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: insecure-pod
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+
+---
+
+After: safer, production-ready
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-pod
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.25
+      resources:
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+      securityContext:
+        runAsNonRoot: true
+        readOnlyRootFilesystem: true
+
+---
+
+🛣️ Roadmap
+
+[x] CLI: file + directory linting
+
+[x] YAML-based rule catalog
+
+[x] Markdown rule doc generator
+
+[ ] Web UI for visual feedback
+
+[ ] kubelet log explainer
+
+[ ] GitHub Action / CI/CD integration
+
+[ ] YAML fix suggestions (--fix)
+
+[ ] JSON output & structured annotations
+
+---
+
+🤝 Contributing
+Pull requests welcome! Whether it’s a new rule, better docs, or a feature suggestion — we’d love to hear from you.
+
+---
+
+📜 License
+MIT License — Built with ❤️ to help engineers ship safer clusters.
